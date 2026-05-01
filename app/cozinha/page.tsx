@@ -45,9 +45,19 @@ export default async function CozinhaPage() {
     .order('sequence_number', { ascending: true })
     .order('id', { ascending: true }))
 
+  const { count: doneCount } = await (client as any)
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', (event as any).id)
+    .eq('status', 'done')
+
   return (
     <div className="min-h-dvh bg-background">
-      <RealtimeOrdersList eventId={(event as any).id} initialOrders={initialOrders || []} />
+      <RealtimeOrdersList
+        eventId={(event as any).id}
+        initialOrders={initialOrders || []}
+        initialDoneCount={doneCount || 0}
+      />
     </div>
   )
 }

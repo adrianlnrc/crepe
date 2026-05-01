@@ -39,14 +39,16 @@ interface Order {
 interface RealtimeOrdersListProps {
   eventId: string
   initialOrders: any[]
+  initialDoneCount: number
 }
 
-export function RealtimeOrdersList({ eventId, initialOrders }: RealtimeOrdersListProps) {
+export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }: RealtimeOrdersListProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [orders, setOrders] = useState<Map<string, Order>>(
     new Map(initialOrders.map((o: any) => [o.id, o]))
   )
+  const [doneCount, setDoneCount] = useState(initialDoneCount)
   const [channel, setChannel] = useState<RealtimeChannel | null>(null)
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState('')
@@ -84,6 +86,9 @@ export function RealtimeOrdersList({ eventId, initialOrders }: RealtimeOrdersLis
                 next.delete(order.id)
                 return next
               })
+              if (order.status === 'done') {
+                setDoneCount((n) => n + 1)
+              }
             }
           }
         }
@@ -191,8 +196,10 @@ export function RealtimeOrdersList({ eventId, initialOrders }: RealtimeOrdersLis
           <h1 className="text-2xl sm:text-3xl font-bold">🍳 Painel da Cozinha</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {sortedOrders.filter((o) => o.status === 'in_progress').length} em preparo
-            {' '}
-            • {sortedOrders.filter((o) => o.status === 'pending').length} na fila
+            {' · '}
+            {sortedOrders.filter((o) => o.status === 'pending').length} na fila
+            {' · '}
+            {doneCount} prontos ✓
           </p>
         </div>
         <Button
