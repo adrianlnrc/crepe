@@ -23,8 +23,29 @@ const MAX_RETRIES = 3
 const RETRY_DELAYS = [1000, 2000, 4000] // ms
 
 const INGREDIENTS = {
-  salgado: ['Mussarela', 'Presunto', 'Milho', 'Alho Poró', 'Bacon', 'Palmito'],
-  doce: ['Banana', 'Chocolate', 'Goiabada'],
+  salgado: [
+    'Mussarela',
+    'Presunto',
+    'Milho',
+    'Alho Poró',
+    'Bacon',
+    'Palmito',
+    'Frango Desfiado',
+    'Carne Seca',
+    'Catupiry',
+    'Orégano',
+    'Manjericão',
+  ],
+  doce: [
+    'Banana',
+    'Chocolate',
+    'Goiabada',
+    'Doce de Leite',
+    'Morango',
+    'Queijo',
+    'Banana, Canela e Açúcar',
+    'Romeu e Julieta',
+  ],
 }
 const DOCE_FLAVOR_ID = 'f1000001-0000-0000-0000-000000000007'
 const SALGADO_FLAVOR_ID = 'f1000001-0000-0000-0000-000000000008'
