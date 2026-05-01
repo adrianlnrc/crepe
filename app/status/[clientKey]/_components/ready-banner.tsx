@@ -1,16 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 
 interface ReadyBannerProps {
   identifier: string
   flavorName: string
+  eventId: string
 }
 
-export function ReadyBanner({ identifier, flavorName }: ReadyBannerProps) {
+export function ReadyBanner({ identifier, flavorName, eventId }: ReadyBannerProps) {
   const router = useRouter()
+  const [retrieved, setRetrieved] = useState(false)
 
   useEffect(() => {
     // Vibração e som — best-effort
@@ -34,14 +36,27 @@ export function ReadyBanner({ identifier, flavorName }: ReadyBannerProps) {
       <p className="text-2xl font-semibold mb-2">Retire no balcão</p>
       <p className="text-lg opacity-90 mb-1">{identifier}</p>
       <p className="text-base opacity-80 mb-10">{flavorName}</p>
-      <Button
-        onClick={() => router.push('/')}
-        variant="outline"
-        size="lg"
-        className="bg-white text-green-700 hover:bg-green-50 border-white font-semibold text-lg h-14 px-8"
-      >
-        Já retirei 👍
-      </Button>
+      {retrieved ? (
+        <div className="text-center space-y-4">
+          <p className="text-2xl">🥞</p>
+          <p className="text-lg font-semibold">Bom apetite!</p>
+          <a
+            href={`/pedido?event=${eventId}`}
+            className="inline-block mt-2 px-6 py-3 bg-white text-green-700 font-semibold rounded-full hover:bg-green-50 transition"
+          >
+            Quero mais um! 🥞
+          </a>
+        </div>
+      ) : (
+        <Button
+          onClick={() => setRetrieved(true)}
+          variant="outline"
+          size="lg"
+          className="bg-white text-green-700 hover:bg-green-50 border-white font-semibold text-lg h-14 px-8"
+        >
+          Já retirei 👍
+        </Button>
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { Clock } from 'lucide-react'
 
 interface Order {
   id: string
+  event_id: string
   sequence_number: number
   status: 'pending' | 'in_progress' | 'done' | 'cancelled'
   first_name: string
@@ -95,7 +96,7 @@ export function StatusScreen({
 
   if (order.status === 'done') {
     const identifier = formatOrderIdentifier(order.first_name, order.last_name, order.sequence_number)
-    return <ReadyBanner identifier={identifier} flavorName={order.flavors?.name || ''} />
+    return <ReadyBanner identifier={identifier} flavorName={order.flavors?.name || ''} eventId={order.event_id} />
   }
 
   const identifier = formatOrderIdentifier(order.first_name, order.last_name, order.sequence_number)
