@@ -79,6 +79,25 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
                 const merged = { ...order, flavors: existing?.flavors ?? order.flavors ?? null }
                 return new Map(prev).set(order.id, merged)
               })
+
+              if (payload.eventType === 'INSERT') {
+                // Alerta sonoro ao chegar novo pedido
+                try {
+                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+                  const osc = ctx.createOscillator()
+                  const gain = ctx.createGain()
+                  osc.connect(gain)
+                  gain.connect(ctx.destination)
+                  osc.frequency.value = 880
+                  gain.gain.setValueAtTime(0.3, ctx.currentTime)
+                  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+                  osc.start()
+                  osc.stop(ctx.currentTime + 0.4)
+                } catch {}
+
+                // Vibração no celular (se disponível)
+                try { navigator.vibrate?.([100]) } catch {}
+              }
             } else {
               // Remove se finalizou ou foi cancelado
               setOrders((prev) => {
