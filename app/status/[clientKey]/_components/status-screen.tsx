@@ -64,7 +64,11 @@ export function StatusScreen({
         (payload: any) => {
           const updated = payload.new as Order
           const prevStatus = order.status
-          setOrder((prev) => ({ ...prev, ...updated }))
+          setOrder((prev) => ({
+            ...prev,
+            ...updated,
+            flavors: updated.flavors ?? prev.flavors,
+          }))
 
           if (updated.status === 'done' && prevStatus !== 'done') {
             try { navigator.vibrate?.([200, 100, 200]) } catch {}
