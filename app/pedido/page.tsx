@@ -1,11 +1,14 @@
 import { redirect } from 'next/navigation'
 import { getServerClient } from '@/lib/supabase/server'
 import { OrderForm } from './_components/order-form'
+import { Lora } from 'next/font/google'
 
 export const metadata = {
   title: 'Faça seu Pedido',
   description: 'Preencha seu pedido de crepe',
 }
+
+const lora = Lora({ subsets: ['latin'], weight: ['700'] })
 
 export default async function PedidoPage({
   searchParams,
@@ -14,12 +17,10 @@ export default async function PedidoPage({
 }) {
   const eventId = searchParams.event
 
-  // Se não tem event_id na query, redireciona para home
   if (!eventId) {
     redirect('/')
   }
 
-  // Busca evento e sabores do servidor
   const client = getServerClient()
   const { data: event, error: eventError } = await client
     .from('events')
@@ -41,16 +42,16 @@ export default async function PedidoPage({
 
   if (eventError || !event) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-dvh bg-gradient-to-b from-orange-50 to-amber-50/40 flex items-center justify-center p-4">
         <div className="text-center">
-          <h1 className="text-xl font-semibold mb-4">Evento não está ativo</h1>
-          <p className="text-muted-foreground">Acesse o QR code do evento para fazer seu pedido.</p>
+          <div className="text-5xl mb-4">😕</div>
+          <h1 className="text-xl font-semibold text-orange-900 mb-2">Evento não está ativo</h1>
+          <p className="text-orange-700/60 text-sm">Acesse o QR code do evento para fazer seu pedido.</p>
         </div>
       </div>
     )
   }
 
-  // Formata dados para o cliente
   const formattedEvent = {
     id: (event as any).id,
     name: (event as any).name,
@@ -69,12 +70,24 @@ export default async function PedidoPage({
   }
 
   return (
-    <div className="min-h-dvh bg-background p-4 sm:p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">{formattedEvent.name}</h1>
-          <p className="text-sm text-muted-foreground mt-2">Preencha seu pedido abaixo</p>
-        </div>
+    <div className="min-h-dvh bg-gradient-to-b from-orange-50 to-amber-50/40">
+      <div className="max-w-lg mx-auto px-4 pt-10 pb-24">
+
+        {/* Header */}
+        <header className="text-center mb-10">
+          <div className="text-6xl mb-4 inline-block animate-bounce"
+            style={{ animationDuration: '2s', animationIterationCount: '2' }}>
+            🥞
+          </div>
+          <h1
+            className={`${lora.className} text-4xl font-bold text-orange-900 leading-tight`}
+          >
+            {formattedEvent.name}
+          </h1>
+          <p className="text-orange-700/50 text-xs font-semibold tracking-widest uppercase mt-2">
+            Monte seu pedido
+          </p>
+        </header>
 
         <OrderForm event={formattedEvent} />
       </div>

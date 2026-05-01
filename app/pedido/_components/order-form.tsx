@@ -6,11 +6,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createOrderSchema } from '@/lib/validation/order-schema'
 import { generateClientKey } from '@/lib/domain/idempotency'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card } from '@/components/ui/card'
 import { FlavorPicker } from './flavor-picker'
 import { IngredientChecklist } from './ingredient-checklist'
 import { Loader2 } from 'lucide-react'
@@ -33,13 +30,19 @@ interface OrderFormProps {
 }
 
 const MAX_RETRIES = 3
-const RETRY_DELAYS = [1000, 2000, 4000] // ms
+const RETRY_DELAYS = [1000, 2000, 4000]
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-bold tracking-widest uppercase text-orange-700/60 mb-3">
+      {children}
+    </p>
+  )
+}
 
 export function OrderForm({ event }: OrderFormProps) {
   const router = useRouter()
-  const [clientKey, setClientKey] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [retryCount, setRetryCount] = useState(0)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const form = useForm({
@@ -55,15 +58,14 @@ export function OrderForm({ event }: OrderFormProps) {
     },
   })
 
-  // Gera client_key no mount
   useEffect(() => {
     const key = generateClientKey()
-    setClientKey(key)
     form.setValue('client_key', key as any)
   }, [form])
 
   const selectedFlavorId = form.watch('flavor_id')
   const selectedFlavor = event.flavors.find((f) => f.id === selectedFlavorId)
+  const observation = form.watch('observation') || ''
 
   const onSubmit = async (data: any) => {
     setIsSubmitting(true)
@@ -78,22 +80,15 @@ export function OrderForm({ event }: OrderFormProps) {
         })
 
         if (response.ok) {
-          const { order } = await response.json()
-          // Redireciona para tela de status com client_key
           router.push(`/status/${data.client_key}`)
           return
         }
 
         if (attempt < MAX_RETRIES) {
-          // Retry com backoff
           const delay = RETRY_DELAYS[attempt]
           setSubmitError(`Reenviando em ${delay / 1000}s...`)
-          setTimeout(() => {
-            setRetryCount(attempt + 1)
-            attemptSubmit(attempt + 1)
-          }, delay)
+          setTimeout(() => attemptSubmit(attempt + 1), delay)
         } else {
-          // Max retries atingido
           const errorData = await response.json()
           setSubmitError(
             errorData.error === 'event_inactive'
@@ -102,14 +97,11 @@ export function OrderForm({ event }: OrderFormProps) {
           )
           setIsSubmitting(false)
         }
-      } catch (error) {
+      } catch {
         if (attempt < MAX_RETRIES) {
           const delay = RETRY_DELAYS[attempt]
           setSubmitError(`Reenviando em ${delay / 1000}s...`)
-          setTimeout(() => {
-            setRetryCount(attempt + 1)
-            attemptSubmit(attempt + 1)
-          }, delay)
+          setTimeout(() => attemptSubmit(attempt + 1), delay)
         } else {
           setSubmitError('Erro de conexão. Verifique sua internet.')
           setIsSubmitting(false)
@@ -121,48 +113,50 @@ export function OrderForm({ event }: OrderFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      {/* Nome */}
-      <Card className="p-4">
-        <Label htmlFor="first_name" className="block text-sm font-medium mb-2">
-          Primeiro Nome *
-        </Label>
-        <Input
-          id="first_name"
-          placeholder="Ex: Maria"
-          autoComplete="given-name"
-          inputMode="text"
-          disabled={isSubmitting}
-          {...form.register('first_name')}
-          className="mb-4"
-        />
-        {form.formState.errors.first_name && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.first_name.message}
-          </p>
-        )}
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
-        <Label htmlFor="last_name" className="block text-sm font-medium mb-2 mt-4">
-          Sobrenome *
-        </Label>
-        <Input
-          id="last_name"
-          placeholder="Ex: Silva"
-          autoComplete="family-name"
-          inputMode="text"
-          disabled={isSubmitting}
-          {...form.register('last_name')}
-        />
-        {form.formState.errors.last_name && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.last_name.message}
-          </p>
-        )}
-      </Card>
+      {/* ── Nome ── */}
+      <section>
+        <SectionLabel>👤 Seu nome</SectionLabel>
+        <div className="space-y-3">
+          <div>
+            <Input
+              placeholder="Primeiro nome *"
+              autoComplete="given-name"
+              inputMode="text"
+              disabled={isSubmitting}
+              {...form.register('first_name')}
+              className="h-12 rounded-xl border-orange-200 bg-white placeholder:text-orange-300
+                         focus:border-orange-400 focus:ring-orange-400 text-orange-900"
+            />
+            {form.formState.errors.first_name && (
+              <p className="text-xs text-red-500 mt-1 ml-1">
+                {form.formState.errors.first_name.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <Input
+              placeholder="Sobrenome *"
+              autoComplete="family-name"
+              inputMode="text"
+              disabled={isSubmitting}
+              {...form.register('last_name')}
+              className="h-12 rounded-xl border-orange-200 bg-white placeholder:text-orange-300
+                         focus:border-orange-400 focus:ring-orange-400 text-orange-900"
+            />
+            {form.formState.errors.last_name && (
+              <p className="text-xs text-red-500 mt-1 ml-1">
+                {form.formState.errors.last_name.message}
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
 
-      {/* Sabor */}
-      <div>
-        <Label className="block text-sm font-medium mb-3">Sabor *</Label>
+      {/* ── Sabor ── */}
+      <section>
+        <SectionLabel>🥞 Escolha o sabor *</SectionLabel>
         <FlavorPicker
           flavors={event.flavors}
           selectedId={selectedFlavorId}
@@ -173,18 +167,16 @@ export function OrderForm({ event }: OrderFormProps) {
           disabled={isSubmitting}
         />
         {form.formState.errors.flavor_id && (
-          <p className="text-sm text-destructive mt-2">
+          <p className="text-xs text-red-500 mt-2 ml-1">
             {form.formState.errors.flavor_id.message}
           </p>
         )}
-      </div>
+      </section>
 
-      {/* Ingredientes */}
-      {selectedFlavor && (
-        <div>
-          <Label className="block text-sm font-medium mb-3">
-            Ingredientes (opcionais)
-          </Label>
+      {/* ── Ingredientes ── */}
+      {selectedFlavor && selectedFlavor.ingredients.length > 0 && (
+        <section>
+          <SectionLabel>🥄 Ingredientes</SectionLabel>
           <IngredientChecklist
             ingredients={selectedFlavor.ingredients}
             selectedIds={(form.watch('ingredient_ids') || []) as string[]}
@@ -197,55 +189,63 @@ export function OrderForm({ event }: OrderFormProps) {
             }}
             disabled={isSubmitting}
           />
-        </div>
+        </section>
       )}
 
-      {/* Observação */}
-      <Card className="p-4">
-        <Label htmlFor="observation" className="block text-sm font-medium mb-2">
-          Observações (até 140 caracteres)
-        </Label>
-        <Textarea
-          id="observation"
-          placeholder="Ex: Sem açúcar, pouca nutella..."
-          maxLength={140}
-          disabled={isSubmitting}
-          {...form.register('observation')}
-          className="resize-none"
-          rows={3}
-        />
-        <div className="text-xs text-muted-foreground mt-2">
-          {form.watch('observation')?.length || 0} / 140
+      {/* ── Observação ── */}
+      <section>
+        <SectionLabel>📝 Observações</SectionLabel>
+        <div className="relative">
+          <Textarea
+            placeholder="Ex: sem açúcar, pouca nutella..."
+            maxLength={140}
+            disabled={isSubmitting}
+            {...form.register('observation')}
+            className="resize-none rounded-xl border-orange-200 bg-white placeholder:text-orange-300
+                       focus:border-orange-400 focus:ring-orange-400 text-orange-900 pb-7"
+            rows={3}
+          />
+          <span className="absolute bottom-2 right-3 text-xs text-orange-300 tabular-nums">
+            {observation.length}/140
+          </span>
         </div>
         {form.formState.errors.observation && (
-          <p className="text-sm text-destructive mt-2">
+          <p className="text-xs text-red-500 mt-1 ml-1">
             {form.formState.errors.observation.message}
           </p>
         )}
-      </Card>
+      </section>
 
-      {/* Erro e retry status */}
+      {/* ── Erro ── */}
       {submitError && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">
+          <span>⚠️</span>
           {submitError}
         </div>
       )}
 
-      {/* Botão de envio */}
-      <Button
+      {/* ── Submit ── */}
+      <button
         type="submit"
         disabled={isSubmitting || !form.formState.isValid}
-        className="w-full h-12 text-base font-semibold"
+        className="
+          w-full h-14 rounded-2xl font-bold text-lg text-white
+          bg-orange-500 hover:bg-orange-600
+          shadow-lg shadow-orange-300/50
+          transition-all active:scale-[0.98]
+          disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
+          flex items-center justify-center gap-2
+        "
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
             Enviando...
           </>
         ) : (
-          'Fazer Pedido'
+          <>Fazer Pedido 🥞</>
         )}
-      </Button>
+      </button>
     </form>
   )
 }

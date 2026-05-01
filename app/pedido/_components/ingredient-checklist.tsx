@@ -1,8 +1,5 @@
 'use client'
 
-import { Checkbox } from '@/components/ui/checkbox'
-import { Card } from '@/components/ui/card'
-
 interface Ingredient {
   id: string
   name: string
@@ -23,30 +20,35 @@ export function IngredientChecklist({
 }: IngredientChecklistProps) {
   if (ingredients.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground">Nenhum ingrediente disponível</div>
+      <p className="text-sm text-orange-400 italic">Nenhum ingrediente disponível</p>
     )
   }
 
   return (
-    <Card className="p-4">
-      <div className="space-y-3">
-        {ingredients.map((ingredient) => (
-          <label
+    <div className="flex flex-wrap gap-2">
+      {ingredients.map((ingredient) => {
+        const isSelected = selectedIds.includes(ingredient.id)
+        return (
+          <button
             key={ingredient.id}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${
-              disabled ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            type="button"
+            onClick={() => !disabled && onToggle(ingredient.id)}
+            disabled={disabled}
+            className={`
+              px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-150
+              outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2
+              ${isSelected
+                ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200'
+                : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
+              }
+              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+            `}
           >
-            <Checkbox
-              checked={selectedIds.includes(ingredient.id)}
-              onCheckedChange={() => !disabled && onToggle(ingredient.id)}
-              disabled={disabled}
-              className="accent-primary"
-            />
-            <span className="text-sm">{ingredient.name}</span>
-          </label>
-        ))}
-      </div>
-    </Card>
+            {isSelected && <span className="mr-1.5">✓</span>}
+            {ingredient.name}
+          </button>
+        )
+      })}
+    </div>
   )
 }
