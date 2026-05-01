@@ -52,6 +52,18 @@ export function OrderCard({
 }: OrderCardProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [waitMinutes, setWaitMinutes] = useState(0)
+
+  useEffect(() => {
+    if (status !== 'pending') return
+    const update = () => {
+      const diff = Math.floor((Date.now() - new Date(created_at).getTime()) / 60000)
+      setWaitMinutes(diff)
+    }
+    update()
+    const interval = setInterval(update, 30000)
+    return () => clearInterval(interval)
+  }, [status, created_at])
 
   const identifier = formatOrderIdentifier(first_name, last_name, sequence_number)
 
@@ -106,6 +118,17 @@ export function OrderCard({
             <Clock className="h-4 w-4" />
             ~{Math.round(flavor.tempo_medio_preparo / 60)} min
           </div>
+        )}
+
+        {/* Wait time in queue */}
+        {status === 'pending' && (
+          <p className={`text-xs mt-1 ${
+            flavor.tempo_medio_preparo && waitMinutes > flavor.tempo_medio_preparo * 2 / 60
+              ? 'text-orange-500 font-semibold'
+              : 'text-muted-foreground'
+          }`}>
+            Na fila há {waitMinutes < 1 ? 'menos de 1' : waitMinutes} min
+          </p>
         )}
 
         {/* Elapsed time when in progress */}
