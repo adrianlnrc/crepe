@@ -119,7 +119,15 @@ export async function POST(request: NextRequest) {
     // Outro erro do banco
     console.error('Insert order error:', insertError)
     return NextResponse.json(
-      { error: 'database_error' },
+      {
+        error: 'database_error',
+        debug: {
+          code: insertError?.code,
+          message: insertError?.message,
+          details: insertError?.details,
+          hint: insertError?.hint,
+        },
+      },
       { status: 500 }
     )
   } catch (error) {

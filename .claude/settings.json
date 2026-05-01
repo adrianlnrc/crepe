@@ -3,7 +3,13 @@
     "allow": [
       "Bash(npx --yes shadcn@latest add button card input label textarea checkbox badge --yes --overwrite)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(node scripts/gen-session-secret.mjs)",
+      "Bash(git push *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST https://crepe-omega.vercel.app/api/kitchen/login -H 'Content-Type: application/json' -d '{\"code\":\"1234\"}' -w '\\\\nHTTP: %{http_code}')",
+      "Bash(curl -s -X POST https://crepe-omega.vercel.app/api/orders -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -sI https://crepe-omega.vercel.app/api/debug-order)"
     ]
   }
 }
