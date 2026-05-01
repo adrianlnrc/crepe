@@ -5,15 +5,15 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Rotas que requerem autenticação da cozinha
-  const kitchenRoutes = ['/cozinha', '/historico', '/api/kitchen/logout', '/api/orders']
+  const kitchenRoutes = ['/cozinha', '/historico', '/qr', '/api/kitchen/logout', '/api/orders', '/api/history', '/api/export']
   const kitchenApiTransition = pathname.match(/^\/api\/orders\/[^/]+\/transition$/)
 
   const isProtectedRoute = kitchenRoutes.some((route) => pathname.startsWith(route)) || kitchenApiTransition
 
-  // POST /api/orders (criar pedido) é público
-  if (pathname === '/api/orders' && request.method === 'POST') {
-    return NextResponse.next()
-  }
+  // Rotas públicas dentro de /api/orders (acesso do convidado)
+  if (pathname === '/api/orders' && request.method === 'POST') return NextResponse.next()
+  if (pathname.startsWith('/api/orders/by-client-key/')) return NextResponse.next()
+  if (pathname.startsWith('/api/orders/queue-position')) return NextResponse.next()
 
   if (isProtectedRoute) {
     // Skip login page
@@ -52,10 +52,12 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Protege rutas da cozinha
     '/cozinha/:path*',
     '/historico/:path*',
+    '/qr/:path*',
     '/api/kitchen/:path*',
     '/api/orders/:path*',
+    '/api/history/:path*',
+    '/api/export/:path*',
   ],
 }
