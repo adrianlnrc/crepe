@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Crepe — Pedidos da Festa",
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className="min-h-dvh bg-background text-foreground">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );

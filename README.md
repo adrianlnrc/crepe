@@ -38,8 +38,29 @@ npm run test:e2e     # Playwright e2e
 npm run format       # Prettier
 ```
 
+## Rotas
+
+| URL | Quem acessa | Descrição |
+|---|---|---|
+| `/pedido?event=<id>` | Convidado | Formulário de pedido |
+| `/status/<client_key>` | Convidado | Status em tempo real + fila |
+| `/cozinha/login` | Cozinha | Autenticação por código |
+| `/cozinha` | Cozinha | Fila FIFO em tempo real |
+| `/historico` | Anfitrião | Pedidos finalizados + CSV |
+| `/qr` | Anfitrião | Gera e baixa QR Code |
+
 ## Status
 
-Em desenvolvimento — Phase 1 (scaffold) concluída. Próxima: Phase 2 (migrations, RLS, domínio, testes da constituição).
+**Concluído** — todas as 8 fases implementadas.
+
+| Fase | O que entregou |
+|---|---|
+| Phase 1 | Scaffold Next.js 15, Supabase, shadcn/ui |
+| Phase 2 | Migrações, RLS, domínio puro, 86+ testes |
+| Phase 3-4 | US1 (form + status) + US2 (login cozinha + fila) — MVP completo |
+| Phase 5 | Status enriquecido: posição na fila, estimativa, tela PRONTO! |
+| Phase 6 | Histórico paginado + exportação CSV |
+| Phase 7 | QR Code gerado on-demand com download PNG e impressão |
+| Phase 8 | CI/CD, Analytics, PWA manifest, validação de constituição |
 
 Veja o detalhamento em [`specs/001-crepe-orders/tasks.md`](specs/001-crepe-orders/tasks.md).
