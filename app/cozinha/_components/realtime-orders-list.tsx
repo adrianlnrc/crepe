@@ -72,7 +72,11 @@ export function RealtimeOrdersList({ eventId, initialOrders }: RealtimeOrdersLis
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             if (['pending', 'in_progress'].includes(order.status)) {
               // Adiciona ou atualiza no mapa
-              setOrders((prev) => new Map(prev).set(order.id, order))
+              setOrders((prev) => {
+                const existing = prev.get(order.id)
+                const merged = { ...order, flavors: existing?.flavors ?? order.flavors ?? null }
+                return new Map(prev).set(order.id, merged)
+              })
             } else {
               // Remove se finalizou ou foi cancelado
               setOrders((prev) => {
