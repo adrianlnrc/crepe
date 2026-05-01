@@ -43,17 +43,18 @@ export function QueuePosition({ clientKey, initialPosition, initialEstimatedWait
       .eq('client_key', clientKey)
       .single()
       .then(({ data }) => {
-        if (!data?.event_id) return
+        const row = data as { event_id: string } | null
+        if (!row?.event_id) return
 
         const ch = client
-          .channel(`queue:${data.event_id}:${clientKey}`)
+          .channel(`queue:${row.event_id}:${clientKey}`)
           .on(
             'postgres_changes',
             {
               event: 'UPDATE',
               schema: 'public',
               table: 'orders',
-              filter: `event_id=eq.${data.event_id}`,
+              filter: `event_id=eq.${row.event_id}`,
             },
             () => {
               fetchPosition()
