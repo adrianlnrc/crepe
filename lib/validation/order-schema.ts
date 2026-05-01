@@ -36,8 +36,8 @@ export const createOrderSchema = z.object({
 export type CreateOrderInput = z.infer<typeof createOrderSchema>
 
 // Transição de estado de pedido (cozinha)
+// order_id vem na URL, não no body
 export const orderTransitionSchema = z.object({
-  order_id: z.string().uuid('Invalid order ID'),
   to_status: z.enum(['pending', 'in_progress', 'done', 'cancelled'], {
     errorMap: () => ({ message: 'Invalid status' }),
   }),
