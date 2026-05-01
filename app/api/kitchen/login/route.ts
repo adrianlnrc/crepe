@@ -59,10 +59,9 @@ export async function POST(request: NextRequest) {
 
     const { code } = validation.data
 
-    // Busca evento ativo (hardcoded para simplicidade; em produção seria via middleware context)
-    // Por enquanto, busca o evento ativo mais recente
-    const { getBrowserClient } = await import('@/lib/supabase/browser')
-    const client = getBrowserClient()
+    // Busca evento ativo via service role (server-side)
+    const { getServerClient } = await import('@/lib/supabase/server')
+    const client = getServerClient()
 
     const { data: event } = await client
       .from('events')
