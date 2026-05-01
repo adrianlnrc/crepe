@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx --yes shadcn@latest add button card input label textarea checkbox badge --yes --overwrite)"
+      "Bash(npx --yes shadcn@latest add button card input label textarea checkbox badge --yes --overwrite)",
+      "Bash(git add *)"
     ]
   }
 }
