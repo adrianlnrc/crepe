@@ -265,12 +265,16 @@ export function RealtimeOrdersList({
       <div className="bg-card border-b p-4 sm:p-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">🍳 Painel da Cozinha</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {sortedOrders.filter((o) => o.status === 'in_progress').length} em preparo
+          <p className="text-base sm:text-lg text-muted-foreground mt-1 font-medium">
+            <span className="text-blue-600 font-bold">
+              {sortedOrders.filter((o) => o.status === 'in_progress').length}
+            </span>{' '}em preparo
             {' · '}
-            {sortedOrders.filter((o) => o.status === 'pending').length} na fila
+            <span className="text-yellow-600 font-bold">
+              {sortedOrders.filter((o) => o.status === 'pending').length}
+            </span>{' '}na fila
             {' · '}
-            {doneCount} prontos ✓
+            <span className="text-green-600 font-bold">{doneCount}</span> prontos ✓
           </p>
         </div>
         <Button onClick={handleLogout} variant="outline" size="sm">
@@ -280,65 +284,69 @@ export function RealtimeOrdersList({
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-5xl mx-auto space-y-6">
           {sortedOrders.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-lg font-semibold mb-2">Nenhum pedido na fila</p>
-              <p className="text-muted-foreground">Aguardando novos pedidos...</p>
+            <Card className="p-10 text-center">
+              <p className="text-xl font-semibold mb-2">Nenhum pedido na fila</p>
+              <p className="text-base text-muted-foreground">Aguardando novos pedidos...</p>
             </Card>
           ) : (
             <>
               {sortedOrders.some((o) => o.status === 'in_progress') && (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-muted-foreground px-1">
+                  <p className="text-sm sm:text-base font-bold tracking-widest uppercase text-blue-600 px-1">
                     EM PREPARO
                   </p>
-                  {sortedOrders
-                    .filter((o) => o.status === 'in_progress')
-                    .map((order) => (
-                      <OrderCard
-                        key={order.id}
-                        id={order.id}
-                        sequence_number={order.sequence_number}
-                        first_name={order.first_name}
-                        last_name={order.last_name}
-                        flavor={order.flavors || flavorsById[order.flavor_id] || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
-                        ingredients={resolveIngredients(order.ingredient_ids)}
-                        observation={order.observation}
-                        status={order.status}
-                        created_at={order.created_at}
-                        started_at={order.started_at}
-                        onTransition={handleTransition}
-                        onCancel={handleCancel}
-                      />
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sortedOrders
+                      .filter((o) => o.status === 'in_progress')
+                      .map((order) => (
+                        <OrderCard
+                          key={order.id}
+                          id={order.id}
+                          sequence_number={order.sequence_number}
+                          first_name={order.first_name}
+                          last_name={order.last_name}
+                          flavor={order.flavors || flavorsById[order.flavor_id] || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
+                          ingredients={resolveIngredients(order.ingredient_ids)}
+                          observation={order.observation}
+                          status={order.status}
+                          created_at={order.created_at}
+                          started_at={order.started_at}
+                          onTransition={handleTransition}
+                          onCancel={handleCancel}
+                        />
+                      ))}
+                  </div>
                 </div>
               )}
 
               {sortedOrders.some((o) => o.status === 'pending') && (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-muted-foreground px-1">
+                  <p className="text-sm sm:text-base font-bold tracking-widest uppercase text-yellow-600 px-1">
                     NA FILA
                   </p>
-                  {sortedOrders
-                    .filter((o) => o.status === 'pending')
-                    .map((order) => (
-                      <OrderCard
-                        key={order.id}
-                        id={order.id}
-                        sequence_number={order.sequence_number}
-                        first_name={order.first_name}
-                        last_name={order.last_name}
-                        flavor={order.flavors || flavorsById[order.flavor_id] || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
-                        ingredients={resolveIngredients(order.ingredient_ids)}
-                        observation={order.observation}
-                        status={order.status}
-                        created_at={order.created_at}
-                        started_at={order.started_at}
-                        onTransition={handleTransition}
-                        onCancel={handleCancel}
-                      />
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sortedOrders
+                      .filter((o) => o.status === 'pending')
+                      .map((order) => (
+                        <OrderCard
+                          key={order.id}
+                          id={order.id}
+                          sequence_number={order.sequence_number}
+                          first_name={order.first_name}
+                          last_name={order.last_name}
+                          flavor={order.flavors || flavorsById[order.flavor_id] || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
+                          ingredients={resolveIngredients(order.ingredient_ids)}
+                          observation={order.observation}
+                          status={order.status}
+                          created_at={order.created_at}
+                          started_at={order.started_at}
+                          onTransition={handleTransition}
+                          onCancel={handleCancel}
+                        />
+                      ))}
+                  </div>
                 </div>
               )}
             </>

@@ -105,16 +105,20 @@ export function OrderCard({
   }
 
   return (
-    <Card className={`p-4 border-2 transition-colors ${
+    <Card className={`p-5 sm:p-6 border-2 transition-colors ${
       status === 'in_progress' ? 'border-blue-300 bg-blue-50' : ''
     }`}>
-      <div className="space-y-3">
+      <div className="space-y-4">
+
+        {/* Cabeçalho: nome + badge */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold">{identifier}</h3>
-            <p className="text-sm text-muted-foreground">{flavor.name}</p>
+            <h3 className="text-2xl sm:text-3xl font-black leading-tight">{identifier}</h3>
+            <p className="text-base sm:text-lg text-muted-foreground font-medium mt-0.5">
+              {flavor.name}
+            </p>
           </div>
-          <Badge className={statusStyles[status]}>
+          <Badge className={`${statusStyles[status]} text-sm sm:text-base px-3 py-1 shrink-0`}>
             {status === 'pending' && 'Na fila'}
             {status === 'in_progress' && 'Em preparo'}
           </Badge>
@@ -122,11 +126,12 @@ export function OrderCard({
 
         {/* Ingredientes selecionados */}
         {ingredients.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {ingredients.map((name) => (
               <span
                 key={name}
-                className="inline-flex items-center text-xs bg-muted text-foreground px-2 py-0.5 rounded-full"
+                className="inline-flex items-center text-sm sm:text-base bg-muted text-foreground
+                           px-3 py-1 rounded-full font-medium"
               >
                 {name}
               </span>
@@ -134,56 +139,66 @@ export function OrderCard({
           </div>
         )}
 
-        {flavor.tempo_medio_preparo && status === 'pending' && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            ~{Math.round(flavor.tempo_medio_preparo / 60)} min
-          </div>
-        )}
-
-        {status === 'pending' && (
-          <p className={`text-xs mt-1 ${
-            flavor.tempo_medio_preparo && waitMinutes > flavor.tempo_medio_preparo * 2 / 60
-              ? 'text-orange-500 font-semibold'
-              : 'text-muted-foreground'
-          }`}>
-            Na fila há {waitMinutes < 1 ? 'menos de 1' : waitMinutes} min
-          </p>
-        )}
-
+        {/* Timer em preparo — destaque grande */}
         {status === 'in_progress' && (
-          <div className="flex items-center gap-2 text-sm font-semibold text-blue-600">
-            <Clock className="h-4 w-4" />
-            {formatTime(elapsedSeconds)}
+          <div className="flex items-center gap-3 text-blue-600">
+            <Clock className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+            <span className="text-3xl sm:text-4xl font-black tabular-nums">
+              {formatTime(elapsedSeconds)}
+            </span>
           </div>
         )}
 
+        {/* Tempo estimado + espera na fila */}
+        {status === 'pending' && (
+          <div className="flex items-center gap-4 flex-wrap">
+            {flavor.tempo_medio_preparo && (
+              <div className="flex items-center gap-2 text-sm sm:text-base text-muted-foreground">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                ~{Math.round(flavor.tempo_medio_preparo / 60)} min
+              </div>
+            )}
+            <p className={`text-sm sm:text-base font-semibold ${
+              flavor.tempo_medio_preparo && waitMinutes > flavor.tempo_medio_preparo * 2 / 60
+                ? 'text-orange-500'
+                : 'text-muted-foreground'
+            }`}>
+              Na fila há {waitMinutes < 1 ? 'menos de 1' : waitMinutes} min
+            </p>
+          </div>
+        )}
+
+        {/* Observação */}
         {observation && (
-          <div className="bg-amber-50 border border-amber-200 rounded p-2 text-sm">
-            <p className="text-xs text-amber-800 font-medium mb-1">Observação</p>
-            <p className="text-amber-900">{observation}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs sm:text-sm text-amber-700 font-semibold uppercase tracking-wide mb-1">
+              Observação
+            </p>
+            <p className="text-base sm:text-lg text-amber-900 font-medium">{observation}</p>
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground">
+        {/* Horário */}
+        <div className="text-sm sm:text-base text-muted-foreground">
           {new Date(created_at).toLocaleTimeString('pt-BR', {
             hour: '2-digit',
             minute: '2-digit',
           })}
         </div>
 
-        <div className="flex gap-2 pt-2">
+        {/* Botões de ação */}
+        <div className="flex gap-3 pt-1">
           {status === 'pending' && (
             <Button
               onClick={() => handleTransition('in_progress')}
               disabled={isLoading || disabled}
               variant="default"
-              className="flex-1"
+              className="flex-1 h-12 sm:h-14 text-base sm:text-lg font-bold"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
               ) : (
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+                <CheckCircle2 className="h-5 w-5 mr-2" />
               )}
               Iniciar
             </Button>
@@ -194,12 +209,12 @@ export function OrderCard({
               onClick={() => handleTransition('done')}
               disabled={isLoading || disabled}
               variant="default"
-              className="flex-1"
+              className="flex-1 h-12 sm:h-14 text-base sm:text-lg font-bold"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
               ) : (
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+                <CheckCircle2 className="h-5 w-5 mr-2" />
               )}
               Finalizar
             </Button>
@@ -209,9 +224,9 @@ export function OrderCard({
             onClick={() => onCancel(id)}
             variant="outline"
             disabled={disabled || ['done', 'cancelled'].includes(status)}
-            className="flex-1"
+            className="flex-1 h-12 sm:h-14 text-base sm:text-lg font-bold"
           >
-            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertCircle className="h-5 w-5 mr-2" />
             Cancelar
           </Button>
         </div>
