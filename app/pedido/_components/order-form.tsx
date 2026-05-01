@@ -8,29 +8,26 @@ import { createOrderSchema } from '@/lib/validation/order-schema'
 import { generateClientKey } from '@/lib/domain/idempotency'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { FlavorPicker } from './flavor-picker'
-import { IngredientChecklist } from './ingredient-checklist'
 import { Loader2 } from 'lucide-react'
-
-interface Flavor {
-  id: string
-  name: string
-  category: 'doce' | 'salgado'
-  tempo_medio_preparo: number | null
-  ingredients: Array<{ id: string; name: string }>
-}
 
 interface OrderFormProps {
   event: {
     id: string
     name: string
     tempo_medio_preparo_global: number
-    flavors: Flavor[]
+    flavors: any[]
   }
 }
 
 const MAX_RETRIES = 3
 const RETRY_DELAYS = [1000, 2000, 4000] // ms
+
+const INGREDIENTS = {
+  salgado: ['Mussarela', 'Presunto', 'Milho', 'Alho Poró', 'Bacon', 'Palmito'],
+  doce: ['Banana', 'Chocolate', 'Goiabada'],
+}
+const DOCE_FLAVOR_ID = 'f1000001-0000-0000-0000-000000000007'
+const SALGADO_FLAVOR_ID = 'f1000001-0000-0000-0000-000000000008'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -46,6 +43,8 @@ export function OrderForm({ event }: OrderFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([])
+  const [ingredientError, setIngredientError] = useState<string | null>(null)
 
   const form = useForm({
     resolver: zodResolver(createOrderSchema),
@@ -67,11 +66,35 @@ export function OrderForm({ event }: OrderFormProps) {
     form.setValue('client_key', key as any)
   }, [form])
 
-  const selectedFlavorId = form.watch('flavor_id')
-  const selectedFlavor = event.flavors.find((f) => f.id === selectedFlavorId)
+  // Preenche flavor_id automaticamente com base nos ingredientes selecionados
+  useEffect(() => {
+    const hasDoce = selectedIngredients.some((i) => INGREDIENTS.doce.includes(i))
+    const hasSalgado = selectedIngredients.some((i) => INGREDIENTS.salgado.includes(i))
+    if (hasDoce) {
+      form.setValue('flavor_id', DOCE_FLAVOR_ID)
+    } else if (hasSalgado) {
+      form.setValue('flavor_id', SALGADO_FLAVOR_ID)
+    }
+  }, [selectedIngredients, form])
+
   const observation = form.watch('observation') || ''
 
+  const toggleIngredient = (name: string) => {
+    setIngredientError(null)
+    setSelectedIngredients((prev) =>
+      prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
+    )
+  }
+
   const onSubmit = async (data: any) => {
+    if (selectedIngredients.length === 0) {
+      setIngredientError('Selecione pelo menos 1 ingrediente')
+      return
+    }
+    const ingredientsList = selectedIngredients.join(', ')
+    const nota = data.observation?.trim()
+    data.observation = nota ? `${ingredientsList} — ${nota}` : ingredientsList
+
     setIsSubmitting(true)
     setSubmitError(null)
 
@@ -167,43 +190,71 @@ export function OrderForm({ event }: OrderFormProps) {
         </div>
       </section>
 
-      {/* ── Sabor ── */}
+      {/* ── Monte seu crepe ── */}
       <section>
-        <SectionLabel>🥞 Escolha o sabor *</SectionLabel>
-        <FlavorPicker
-          flavors={event.flavors}
-          selectedId={selectedFlavorId}
-          onSelect={(id) => {
-            form.setValue('flavor_id', id)
-            form.clearErrors('flavor_id')
-          }}
-          disabled={isSubmitting}
-        />
-        {form.formState.errors.flavor_id && (
-          <p className="text-xs text-red-500 mt-2 ml-1">
-            {form.formState.errors.flavor_id.message}
-          </p>
-        )}
+        <SectionLabel>🥞 Monte seu crepe</SectionLabel>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-bold tracking-widest uppercase text-orange-700/60 mb-2">
+              🧂 Salgado
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {INGREDIENTS.salgado.map((name) => {
+                const isSelected = selectedIngredients.includes(name)
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => toggleIngredient(name)}
+                    disabled={isSubmitting}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-150
+                      ${isSelected
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200'
+                        : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
+                      }
+                      ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+                    `}
+                  >
+                    {isSelected && <span className="mr-1.5">✓</span>}
+                    {name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-widest uppercase text-orange-700/60 mb-2">
+              🍫 Doce
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {INGREDIENTS.doce.map((name) => {
+                const isSelected = selectedIngredients.includes(name)
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => toggleIngredient(name)}
+                    disabled={isSubmitting}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-150
+                      ${isSelected
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200'
+                        : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
+                      }
+                      ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+                    `}
+                  >
+                    {isSelected && <span className="mr-1.5">✓</span>}
+                    {name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          {ingredientError && (
+            <p className="text-xs text-red-500 ml-1">{ingredientError}</p>
+          )}
+        </div>
       </section>
-
-      {/* ── Ingredientes ── */}
-      {selectedFlavor && (
-        <section>
-          <SectionLabel>🥄 Ingredientes</SectionLabel>
-          <IngredientChecklist
-            ingredients={selectedFlavor.ingredients}
-            selectedIds={(form.watch('ingredient_ids') || []) as string[]}
-            onToggle={(ingredientId: string) => {
-              const current = (form.watch('ingredient_ids') || []) as string[]
-              const updated = current.includes(ingredientId as any)
-                ? current.filter((id) => id !== ingredientId)
-                : [...current, ingredientId]
-              form.setValue('ingredient_ids', updated as any)
-            }}
-            disabled={isSubmitting}
-          />
-        </section>
-      )}
 
       {/* ── Observação ── */}
       <section>
