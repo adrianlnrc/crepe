@@ -137,6 +137,11 @@ export function StatusScreen({
               </div>
               <p className="text-3xl font-bold text-blue-700">{formatTime(elapsedSeconds)}</p>
               <p className="text-xs text-muted-foreground">tempo em preparo</p>
+              {order.flavors?.name && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {order.flavors.name}
+                </p>
+              )}
             </div>
           )}
 
