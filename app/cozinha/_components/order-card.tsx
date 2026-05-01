@@ -18,7 +18,7 @@ interface OrderCardProps {
     category: string
     tempo_medio_preparo: number | null
   }
-  ingredient_ids: string[]
+  ingredients: string[]
   observation: string | null
   status: 'pending' | 'in_progress' | 'done' | 'cancelled'
   created_at: string
@@ -41,7 +41,7 @@ export function OrderCard({
   first_name,
   last_name,
   flavor,
-  ingredient_ids,
+  ingredients,
   observation,
   status,
   created_at,
@@ -62,22 +62,31 @@ export function OrderCard({
     }
     update()
     const interval = setInterval(update, 30000)
-    return () => clearInterval(interval)
+    const onVisible = () => { if (!document.hidden) update() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [status, created_at])
 
   const identifier = formatOrderIdentifier(first_name, last_name, sequence_number)
 
-  // Timer para elapsed time
+  // Timer recalcula a partir de started_at a cada tick — não acumula drift quando aba fica em background
   useEffect(() => {
     if (status !== 'in_progress' || !started_at) return
 
-    setElapsedSeconds(Math.floor((new Date().getTime() - new Date(started_at).getTime()) / 1000))
-
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1)
-    }, 1000)
-
-    return () => clearInterval(interval)
+    const update = () => {
+      setElapsedSeconds(Math.floor((Date.now() - new Date(started_at).getTime()) / 1000))
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    const onVisible = () => { if (!document.hidden) update() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [status, started_at])
 
   const formatTime = (seconds: number) => {
@@ -100,7 +109,6 @@ export function OrderCard({
       status === 'in_progress' ? 'border-blue-300 bg-blue-50' : ''
     }`}>
       <div className="space-y-3">
-        {/* Header: Identifier + Status Badge */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold">{identifier}</h3>
@@ -112,7 +120,20 @@ export function OrderCard({
           </Badge>
         </div>
 
-        {/* Prep time estimate */}
+        {/* Ingredientes selecionados */}
+        {ingredients.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {ingredients.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center text-xs bg-muted text-foreground px-2 py-0.5 rounded-full"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        )}
+
         {flavor.tempo_medio_preparo && status === 'pending' && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
@@ -120,7 +141,6 @@ export function OrderCard({
           </div>
         )}
 
-        {/* Wait time in queue */}
         {status === 'pending' && (
           <p className={`text-xs mt-1 ${
             flavor.tempo_medio_preparo && waitMinutes > flavor.tempo_medio_preparo * 2 / 60
@@ -131,7 +151,6 @@ export function OrderCard({
           </p>
         )}
 
-        {/* Elapsed time when in progress */}
         {status === 'in_progress' && (
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-600">
             <Clock className="h-4 w-4" />
@@ -139,7 +158,6 @@ export function OrderCard({
           </div>
         )}
 
-        {/* Observation */}
         {observation && (
           <div className="bg-amber-50 border border-amber-200 rounded p-2 text-sm">
             <p className="text-xs text-amber-800 font-medium mb-1">Observação</p>
@@ -147,7 +165,6 @@ export function OrderCard({
           </div>
         )}
 
-        {/* Created time */}
         <div className="text-xs text-muted-foreground">
           {new Date(created_at).toLocaleTimeString('pt-BR', {
             hour: '2-digit',
@@ -155,7 +172,6 @@ export function OrderCard({
           })}
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2 pt-2">
           {status === 'pending' && (
             <Button

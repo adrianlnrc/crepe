@@ -30,7 +30,7 @@ interface OrderFormProps {
 }
 
 const MAX_RETRIES = 3
-const RETRY_DELAYS = [1000, 2000, 4000]
+const RETRY_DELAYS = [1000, 2000, 4000] // ms
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -42,7 +42,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export function OrderForm({ event }: OrderFormProps) {
   const router = useRouter()
+  const [clientKey, setClientKey] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const form = useForm({
@@ -58,8 +60,10 @@ export function OrderForm({ event }: OrderFormProps) {
     },
   })
 
+  // Gera client_key no mount
   useEffect(() => {
     const key = generateClientKey()
+    setClientKey(key)
     form.setValue('client_key', key as any)
   }, [form])
 
@@ -80,6 +84,7 @@ export function OrderForm({ event }: OrderFormProps) {
         })
 
         if (response.ok) {
+          const { order } = await response.json()
           router.push(`/status/${data.client_key}`)
           return
         }
@@ -87,7 +92,10 @@ export function OrderForm({ event }: OrderFormProps) {
         if (attempt < MAX_RETRIES) {
           const delay = RETRY_DELAYS[attempt]
           setSubmitError(`Reenviando em ${delay / 1000}s...`)
-          setTimeout(() => attemptSubmit(attempt + 1), delay)
+          setTimeout(() => {
+            setRetryCount(attempt + 1)
+            attemptSubmit(attempt + 1)
+          }, delay)
         } else {
           const errorData = await response.json()
           setSubmitError(
@@ -97,11 +105,14 @@ export function OrderForm({ event }: OrderFormProps) {
           )
           setIsSubmitting(false)
         }
-      } catch {
+      } catch (error) {
         if (attempt < MAX_RETRIES) {
           const delay = RETRY_DELAYS[attempt]
           setSubmitError(`Reenviando em ${delay / 1000}s...`)
-          setTimeout(() => attemptSubmit(attempt + 1), delay)
+          setTimeout(() => {
+            setRetryCount(attempt + 1)
+            attemptSubmit(attempt + 1)
+          }, delay)
         } else {
           setSubmitError('Erro de conexão. Verifique sua internet.')
           setIsSubmitting(false)
@@ -121,6 +132,7 @@ export function OrderForm({ event }: OrderFormProps) {
         <div className="space-y-3">
           <div>
             <Input
+              id="first_name"
               placeholder="Primeiro nome *"
               autoComplete="given-name"
               inputMode="text"
@@ -137,6 +149,7 @@ export function OrderForm({ event }: OrderFormProps) {
           </div>
           <div>
             <Input
+              id="last_name"
               placeholder="Sobrenome *"
               autoComplete="family-name"
               inputMode="text"
@@ -174,7 +187,7 @@ export function OrderForm({ event }: OrderFormProps) {
       </section>
 
       {/* ── Ingredientes ── */}
-      {selectedFlavor && selectedFlavor.ingredients.length > 0 && (
+      {selectedFlavor && (
         <section>
           <SectionLabel>🥄 Ingredientes</SectionLabel>
           <IngredientChecklist
@@ -197,7 +210,8 @@ export function OrderForm({ event }: OrderFormProps) {
         <SectionLabel>📝 Observações</SectionLabel>
         <div className="relative">
           <Textarea
-            placeholder="Ex: sem açúcar, pouca nutella..."
+            id="observation"
+            placeholder="Ex: Sem açúcar, pouca nutella..."
             maxLength={140}
             disabled={isSubmitting}
             {...form.register('observation')}
@@ -227,7 +241,7 @@ export function OrderForm({ event }: OrderFormProps) {
       {/* ── Submit ── */}
       <button
         type="submit"
-        disabled={isSubmitting || !form.formState.isValid}
+        disabled={isSubmitting}
         className="
           w-full h-14 rounded-2xl font-bold text-lg text-white
           bg-orange-500 hover:bg-orange-600
