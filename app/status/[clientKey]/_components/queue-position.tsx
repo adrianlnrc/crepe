@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Clock } from 'lucide-react'
 import { formatWaitTime } from '@/lib/domain/estimate'
+import { getBrowserClient } from '@/lib/supabase/browser'
 
 interface QueuePositionProps {
   clientKey: string
@@ -31,6 +32,38 @@ export function QueuePosition({ clientKey, initialPosition, initialEstimatedWait
     const interval = setInterval(fetchPosition, 10_000)
     return () => clearInterval(interval)
   }, [fetchPosition])
+
+  // Realtime: atualiza posição instantaneamente quando qualquer pedido do evento muda
+  useEffect(() => {
+    const client = getBrowserClient()
+
+    client
+      .from('orders')
+      .select('event_id')
+      .eq('client_key', clientKey)
+      .single()
+      .then(({ data }) => {
+        if (!data?.event_id) return
+
+        const ch = client
+          .channel(`queue:${data.event_id}:${clientKey}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'orders',
+              filter: `event_id=eq.${data.event_id}`,
+            },
+            () => {
+              fetchPosition()
+            }
+          )
+          .subscribe()
+
+        return () => { client.removeChannel(ch) }
+      })
+  }, [clientKey, fetchPosition])
 
   if (position === null) {
     return (
