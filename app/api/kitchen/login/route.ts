@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Cria sessão
     const sessionId = uuidv4()
-    const signedSession = signKitchenSession(sessionId)
+    const signedSession = await signKitchenSession(sessionId)
 
     const response = NextResponse.json({ ok: true })
 

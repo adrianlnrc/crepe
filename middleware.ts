@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyKitchenSession } from '@/lib/supabase/middleware'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Rotas que requerem autenticação da cozinha
@@ -38,7 +38,7 @@ export function middleware(request: NextRequest) {
     }
 
     // Verifica assinatura da sessão
-    const { valid } = verifyKitchenSession(kitchenSession)
+    const { valid } = await verifyKitchenSession(kitchenSession)
     if (!valid) {
       if (request.headers.get('accept')?.includes('text/html')) {
         return NextResponse.redirect(new URL('/cozinha/login', request.url))
