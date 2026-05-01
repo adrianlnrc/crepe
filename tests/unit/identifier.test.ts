@@ -25,31 +25,24 @@ const mockOrder: Order = {
 }
 
 describe('identifier - formatOrderIdentifier', () => {
-  it('formats order with first name and sequence', () => {
-    expect(formatOrderIdentifier(mockOrder)).toBe('Maria #42')
+  it('formats with first name, last name, and zero-padded sequence', () => {
+    expect(formatOrderIdentifier('Maria', 'Silva', 42)).toBe('Maria Silva #042')
   })
 
-  it('works with single char names', () => {
-    const order = { ...mockOrder, first_name: 'A' }
-    expect(formatOrderIdentifier(order)).toBe('A #42')
-  })
-
-  it('works with long names', () => {
-    const order = {
-      ...mockOrder,
-      first_name: 'Alexandrino',
-    }
-    expect(formatOrderIdentifier(order)).toBe('Alexandrino #42')
+  it('zero-pads to 3 digits', () => {
+    expect(formatOrderIdentifier('João', 'Santos', 5)).toBe('João Santos #005')
   })
 
   it('works with sequence 1', () => {
-    const order = { ...mockOrder, sequence_number: 1 }
-    expect(formatOrderIdentifier(order)).toBe('Maria #1')
+    expect(formatOrderIdentifier('Ana', 'Costa', 1)).toBe('Ana Costa #001')
   })
 
-  it('works with large sequences', () => {
-    const order = { ...mockOrder, sequence_number: 9999 }
-    expect(formatOrderIdentifier(order)).toBe('Maria #9999')
+  it('works with large sequences (>999)', () => {
+    expect(formatOrderIdentifier('Pedro', 'Oliveira', 1234)).toBe('Pedro Oliveira #1234')
+  })
+
+  it('works with single char names', () => {
+    expect(formatOrderIdentifier('A', 'B', 7)).toBe('A B #007')
   })
 })
 
@@ -81,27 +74,23 @@ describe('identifier - formatSequenceNumber', () => {
 
 describe('identifier - isValidOrderIdentifier', () => {
   it('accepts valid identifier format', () => {
-    expect(isValidOrderIdentifier('Maria #42')).toBe(true)
+    expect(isValidOrderIdentifier('Maria Silva #042')).toBe(true)
   })
 
-  it('accepts identifier with single char name', () => {
-    expect(isValidOrderIdentifier('A #1')).toBe(true)
+  it('accepts with large sequence', () => {
+    expect(isValidOrderIdentifier('João Santos #1234')).toBe(true)
   })
 
-  it('accepts identifier with long name', () => {
-    expect(isValidOrderIdentifier('Alexandra Maria Silva #999')).toBe(true)
+  it('rejects without last name', () => {
+    expect(isValidOrderIdentifier('Maria #042')).toBe(false)
+  })
+
+  it('rejects with wrong sequence padding', () => {
+    expect(isValidOrderIdentifier('Maria Silva #42')).toBe(false)
   })
 
   it('rejects identifier without hash', () => {
-    expect(isValidOrderIdentifier('Maria 42')).toBe(false)
-  })
-
-  it('rejects identifier without number', () => {
-    expect(isValidOrderIdentifier('Maria #')).toBe(false)
-  })
-
-  it('rejects identifier with space before hash', () => {
-    expect(isValidOrderIdentifier('Maria#42')).toBe(false)
+    expect(isValidOrderIdentifier('Maria Silva 042')).toBe(false)
   })
 
   it('rejects empty string', () => {

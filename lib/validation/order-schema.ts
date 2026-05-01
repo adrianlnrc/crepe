@@ -38,7 +38,7 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>
 // Transição de estado de pedido (cozinha)
 export const orderTransitionSchema = z.object({
   order_id: z.string().uuid('Invalid order ID'),
-  new_status: z.enum(['pending', 'in_progress', 'done', 'cancelled'], {
+  to_status: z.enum(['pending', 'in_progress', 'done', 'cancelled'], {
     errorMap: () => ({ message: 'Invalid status' }),
   }),
   reason: z
@@ -53,8 +53,7 @@ export type OrderTransitionInput = z.infer<typeof orderTransitionSchema>
 
 // Kitchen login
 export const kitchenLoginSchema = z.object({
-  event_id: z.string().uuid('Invalid event ID'),
-  kitchen_code: z
+  code: z
     .string()
     .min(4, 'Code must be at least 4 characters')
     .max(32, 'Code must be at most 32 characters'),
