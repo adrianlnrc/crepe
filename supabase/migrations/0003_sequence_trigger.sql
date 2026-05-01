@@ -7,16 +7,11 @@ DECLARE
   lock_id int;
   next_sequence int;
 BEGIN
-  -- Gera um lock_id derivado do event_id (primeiro 4 bytes da UUID como int)
-  lock_id := (
-    (get_byte(NEW.event_id::bytea, 0)::int << 24) +
-    (get_byte(NEW.event_id::bytea, 1)::int << 16) +
-    (get_byte(NEW.event_id::bytea, 2)::int << 8) +
-    get_byte(NEW.event_id::bytea, 3)::int
-  );
+  -- hashtext retorna int sem cast manual (uuid -> bytea falha em PG cloud estrito)
+  lock_id := hashtext(NEW.event_id::text);
 
-  -- Advisory lock (bloqueante, garante serialização)
-  PERFORM pg_advisory_lock(lock_id);
+  -- Advisory lock transacional: auto-libera no commit/rollback (PgBouncer-safe)
+  PERFORM pg_advisory_xact_lock(lock_id);
 
   -- Pega o máximo sequence_number + 1
   SELECT COALESCE(MAX(sequence_number), 0) + 1 INTO next_sequence
@@ -24,8 +19,6 @@ BEGIN
   WHERE event_id = NEW.event_id;
 
   NEW.sequence_number := next_sequence;
-
-  -- Release automático ao final da transação
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
