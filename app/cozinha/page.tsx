@@ -9,7 +9,6 @@ export const metadata = {
 }
 
 export default async function CozinhaPage() {
-  // Busca evento ativo e seus pedidos inicialmente
   const client = getServerClient()
 
   const { data: event } = await client
@@ -18,7 +17,7 @@ export default async function CozinhaPage() {
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .single<{ id: string }>()
 
   if (!event) {
     return (
@@ -31,7 +30,9 @@ export default async function CozinhaPage() {
     )
   }
 
-  // Busca pedidos iniciais
+  const eventId = event.id
+
+  // Pedidos ativos com sabor já populado
   const { data: initialOrders } = await ((client as any)
     .from('orders')
     .select(
@@ -40,23 +41,44 @@ export default async function CozinhaPage() {
       flavors (id, name, category, tempo_medio_preparo)
     `
     )
-    .eq('event_id', (event as any).id)
+    .eq('event_id', eventId)
     .in('status', ['pending', 'in_progress'])
     .order('sequence_number', { ascending: true })
     .order('id', { ascending: true }))
 
+  // Lookups: usados pra hidratar pedidos que chegam via Realtime sem joins
+  const { data: flavorsList } = await client
+    .from('flavors')
+    .select('id, name, category, tempo_medio_preparo')
+    .eq('event_id', eventId)
+
+  const { data: ingredientsList } = await client
+    .from('ingredients')
+    .select('id, name')
+    .eq('event_id', eventId)
+
+  const flavorsById = Object.fromEntries(
+    ((flavorsList || []) as { id: string; name: string; category: string; tempo_medio_preparo: number | null }[])
+      .map((f) => [f.id, f])
+  )
+  const ingredientsById = Object.fromEntries(
+    ((ingredientsList || []) as { id: string; name: string }[]).map((i) => [i.id, i])
+  )
+
   const { count: doneCount } = await (client as any)
     .from('orders')
     .select('id', { count: 'exact', head: true })
-    .eq('event_id', (event as any).id)
+    .eq('event_id', eventId)
     .eq('status', 'done')
 
   return (
     <div className="min-h-dvh bg-background">
       <RealtimeOrdersList
-        eventId={(event as any).id}
+        eventId={eventId}
         initialOrders={initialOrders || []}
         initialDoneCount={doneCount || 0}
+        flavorsById={flavorsById}
+        ingredientsById={ingredientsById}
       />
     </div>
   )

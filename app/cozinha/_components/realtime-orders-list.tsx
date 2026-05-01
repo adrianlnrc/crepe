@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getBrowserClient } from '@/lib/supabase/browser'
-import { RealtimeChannel } from '@supabase/supabase-js'
 import { OrderCard } from './order-card'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -17,18 +16,20 @@ import {
 import { useToast } from '@/lib/hooks/use-toast'
 import { LogOut } from 'lucide-react'
 
+interface FlavorRef {
+  id: string
+  name: string
+  category: string
+  tempo_medio_preparo: number | null
+}
+
 interface Order {
   id: string
   sequence_number: number
   first_name: string
   last_name: string
   flavor_id: string
-  flavors: {
-    id: string
-    name: string
-    category: string
-    tempo_medio_preparo: number | null
-  } | null
+  flavors: FlavorRef | null
   ingredient_ids: string[]
   observation: string | null
   status: 'pending' | 'in_progress' | 'done' | 'cancelled'
@@ -40,20 +41,63 @@ interface RealtimeOrdersListProps {
   eventId: string
   initialOrders: any[]
   initialDoneCount: number
+  flavorsById: Record<string, FlavorRef>
+  ingredientsById: Record<string, { id: string; name: string }>
 }
 
-export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }: RealtimeOrdersListProps) {
+export function RealtimeOrdersList({
+  eventId,
+  initialOrders,
+  initialDoneCount,
+  flavorsById,
+  ingredientsById,
+}: RealtimeOrdersListProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [orders, setOrders] = useState<Map<string, Order>>(
     new Map(initialOrders.map((o: any) => [o.id, o]))
   )
   const [doneCount, setDoneCount] = useState(initialDoneCount)
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null)
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState('')
+  const seenIdsRef = useRef<Set<string>>(new Set(initialOrders.map((o: any) => o.id)))
 
-  // Subscribe to Realtime
+  // Hidrata um pedido com flavors usando o lookup quando o payload vem sem join
+  const hydrate = useCallback(
+    (raw: Order, prev: Order | undefined): Order => ({
+      ...raw,
+      flavors: raw.flavors ?? prev?.flavors ?? flavorsById[raw.flavor_id] ?? null,
+    }),
+    [flavorsById]
+  )
+
+  // Refetch completo via API (fallback quando Realtime perde mensagens)
+  const refetch = useCallback(async () => {
+    try {
+      const res = await fetch('/api/orders', { cache: 'no-store' })
+      if (!res.ok) return
+      const json = await res.json()
+      const fresh: any[] = json.orders || []
+
+      setOrders((prev) => {
+        const next = new Map<string, Order>()
+        for (const o of fresh) {
+          // /api/orders devolve `flavor` (singular), nosso state usa `flavors`
+          const flavors = o.flavor ?? flavorsById[o.flavor_id] ?? null
+          next.set(o.id, { ...o, flavors })
+        }
+        // Marca novos como vistos pra não soar beep no refetch
+        for (const id of next.keys()) seenIdsRef.current.add(id)
+        // Remove ids que sumiram
+        for (const id of prev.keys()) {
+          if (!next.has(id)) seenIdsRef.current.delete(id)
+        }
+        return next
+      })
+    } catch {}
+  }, [flavorsById])
+
+  // Realtime subscription + reconnect/refetch on visibility change
   useEffect(() => {
     const client = getBrowserClient()
 
@@ -70,41 +114,39 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
         (payload: any) => {
           const order = payload.new as Order
 
-          // Se é inserção ou update de pedido na fila
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             if (['pending', 'in_progress'].includes(order.status)) {
-              // Adiciona ou atualiza no mapa
               setOrders((prev) => {
-                const existing = prev.get(order.id)
-                const merged = { ...order, flavors: existing?.flavors ?? order.flavors ?? null }
+                const merged = hydrate(order, prev.get(order.id))
                 return new Map(prev).set(order.id, merged)
               })
 
-              if (payload.eventType === 'INSERT') {
-                // Alerta sonoro ao chegar novo pedido
-                try {
-                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-                  const osc = ctx.createOscillator()
-                  const gain = ctx.createGain()
-                  osc.connect(gain)
-                  gain.connect(ctx.destination)
-                  osc.frequency.value = 880
-                  gain.gain.setValueAtTime(0.3, ctx.currentTime)
-                  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-                  osc.start()
-                  osc.stop(ctx.currentTime + 0.4)
-                } catch {}
-
-                // Vibração no celular (se disponível)
-                try { navigator.vibrate?.([100]) } catch {}
+              const isFirstSighting = !seenIdsRef.current.has(order.id)
+              if (isFirstSighting) {
+                seenIdsRef.current.add(order.id)
+                if (payload.eventType === 'INSERT') {
+                  try {
+                    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+                    const osc = ctx.createOscillator()
+                    const gain = ctx.createGain()
+                    osc.connect(gain)
+                    gain.connect(ctx.destination)
+                    osc.frequency.value = 880
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+                    osc.start()
+                    osc.stop(ctx.currentTime + 0.4)
+                  } catch {}
+                  try { navigator.vibrate?.([100]) } catch {}
+                }
               }
             } else {
-              // Remove se finalizou ou foi cancelado
               setOrders((prev) => {
                 const next = new Map(prev)
                 next.delete(order.id)
                 return next
               })
+              seenIdsRef.current.delete(order.id)
               if (order.status === 'done') {
                 setDoneCount((n) => n + 1)
               }
@@ -114,22 +156,33 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
       )
       .subscribe()
 
-    setChannel(ch)
+    // Refetch quando volta pra aba (cobre Realtime perdido em background)
+    const onVisible = () => {
+      if (!document.hidden) refetch()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+
+    // Poll de fallback a cada 30s (failsafe pra Realtime instável)
+    const pollInterval = setInterval(refetch, 30000)
 
     return () => {
-      if (ch) {
-        client.removeChannel(ch)
-      }
+      client.removeChannel(ch)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      clearInterval(pollInterval)
     }
-  }, [eventId])
+  }, [eventId, hydrate, refetch])
 
-  // Re-sort orders by sequence_number
   const sortedOrders = Array.from(orders.values()).sort((a, b) => {
     if (a.sequence_number !== b.sequence_number) {
       return a.sequence_number - b.sequence_number
     }
     return a.id.localeCompare(b.id)
   })
+
+  const resolveIngredients = (ids: string[]) =>
+    ids.map((id) => ingredientsById[id]?.name).filter(Boolean) as string[]
 
   const handleTransition = async (orderId: string, toStatus: string) => {
     try {
@@ -209,7 +262,6 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
 
   return (
     <div className="h-dvh flex flex-col bg-background">
-      {/* Header */}
       <div className="bg-card border-b p-4 sm:p-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">🍳 Painel da Cozinha</h1>
@@ -221,17 +273,12 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
             {doneCount} prontos ✓
           </p>
         </div>
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          size="sm"
-        >
+        <Button onClick={handleLogout} variant="outline" size="sm">
           <LogOut className="h-4 w-4 mr-2" />
           Sair
         </Button>
       </div>
 
-      {/* Orders list */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-4">
           {sortedOrders.length === 0 ? (
@@ -241,7 +288,6 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
             </Card>
           ) : (
             <>
-              {/* In progress section */}
               {sortedOrders.some((o) => o.status === 'in_progress') && (
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-muted-foreground px-1">
@@ -256,8 +302,8 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
                         sequence_number={order.sequence_number}
                         first_name={order.first_name}
                         last_name={order.last_name}
-                        flavor={order.flavors || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
-                        ingredient_ids={order.ingredient_ids}
+                        flavor={order.flavors || flavorsById[order.flavor_id] || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
+                        ingredients={resolveIngredients(order.ingredient_ids)}
                         observation={order.observation}
                         status={order.status}
                         created_at={order.created_at}
@@ -269,7 +315,6 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
                 </div>
               )}
 
-              {/* Pending queue section */}
               {sortedOrders.some((o) => o.status === 'pending') && (
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-muted-foreground px-1">
@@ -284,8 +329,8 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
                         sequence_number={order.sequence_number}
                         first_name={order.first_name}
                         last_name={order.last_name}
-                        flavor={order.flavors || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
-                        ingredient_ids={order.ingredient_ids}
+                        flavor={order.flavors || flavorsById[order.flavor_id] || { id: '', name: 'Desconhecido', category: '', tempo_medio_preparo: null }}
+                        ingredients={resolveIngredients(order.ingredient_ids)}
                         observation={order.observation}
                         status={order.status}
                         created_at={order.created_at}
@@ -301,7 +346,6 @@ export function RealtimeOrdersList({ eventId, initialOrders, initialDoneCount }:
         </div>
       </div>
 
-      {/* Cancel dialog */}
       <Dialog open={!!cancelingOrderId} onOpenChange={() => setCancelingOrderId(null)}>
         <DialogContent>
           <DialogHeader>

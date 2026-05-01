@@ -203,7 +203,7 @@ export function OrderForm({ event }: OrderFormProps) {
       {/* Observação */}
       <Card className="p-4">
         <Label htmlFor="observation" className="block text-sm font-medium mb-2">
-          Observações (até 140 caracteres)
+          Observações (opcional)
         </Label>
         <Textarea
           id="observation"
@@ -234,7 +234,7 @@ export function OrderForm({ event }: OrderFormProps) {
       {/* Botão de envio */}
       <Button
         type="submit"
-        disabled={isSubmitting || !form.formState.isValid}
+        disabled={isSubmitting}
         className="w-full h-12 text-base font-semibold"
       >
         {isSubmitting ? (

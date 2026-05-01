@@ -9,7 +9,8 @@
       "Bash(node -e ' *)",
       "Bash(curl -s -X POST https://crepe-omega.vercel.app/api/kitchen/login -H 'Content-Type: application/json' -d '{\"code\":\"1234\"}' -w '\\\\nHTTP: %{http_code}')",
       "Bash(curl -s -X POST https://crepe-omega.vercel.app/api/orders -H 'Content-Type: application/json' -d '{ *)",
-      "Bash(curl -sI https://crepe-omega.vercel.app/api/debug-order)"
+      "Bash(curl -sI https://crepe-omega.vercel.app/api/debug-order)",
+      "Bash(git fetch *)"
     ]
   }
 }
